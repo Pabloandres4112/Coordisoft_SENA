@@ -144,7 +144,7 @@ const handleInputChange = (name, value) => {
         >
           {personasOptions.map((persona) => (
             <SelectItem key={persona.id} value={persona.id.toString()}>
-              {persona.first_name} {persona.last_name}
+              {persona.first_name}
             </SelectItem>
           ))}
         </Select>
