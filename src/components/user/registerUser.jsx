@@ -7,8 +7,9 @@ import GlobalModal from "../componets_globals/GlobalModal";
 
 const RegisterUser = ({ onRegisterSuccess }) => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [fieldErrors, setFieldErrors] = useState({});
 
-  // Estado para todos los campos necesarios para registrar un usuario
+
   const [userData, setUserData] = useState({
     username: "",
     email: "",
@@ -39,7 +40,16 @@ const RegisterUser = ({ onRegisterSuccess }) => {
     fetchRoles();
   }, []);
 
-  // Función para manejar los cambios en los inputs
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const isValidPhone = (phone) => {
+    const phoneRegex = /^[0-9]{10}$/;
+    return phoneRegex.test(phone);
+  };
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUserData({ ...userData, [name]: value });
@@ -48,19 +58,27 @@ const RegisterUser = ({ onRegisterSuccess }) => {
     }
   };
 
-  // Función para manejar los cambios en el select de roles
   const handleRoleChange = (e) => {
     const roleValue = parseInt(e.target.value, 10); // Convertir el valor a número
     setUserData({ ...userData, Rol_persona: roleValue });
   };
 
-  // Función para manejar el envío del formulario
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    // Verificar si algún campo requerido está vacío
+ 
     if (!userData.username || !userData.email || !userData.Cedula_persona || !userData.Edad_persona || !userData.Telefono_persona || !userData.Rol_persona || !userData.first_name || !userData.last_name || !userData.password) {
       setError("Todos los campos son obligatorios.");
+      return;
+    }
+
+    
+    if (!isValidEmail(userData.email)) {
+      setError("El formato del correo electrónico es inválido.");
+      return;
+    }
+
+    if (!isValidPhone(userData.Telefono_persona)) {
+      setError("El formato del teléfono es invalido, o supera los 10 digitos.");
       return;
     }
 
@@ -83,23 +101,36 @@ const RegisterUser = ({ onRegisterSuccess }) => {
       }); // Limpiar el formulario
       onRegisterSuccess(); // Llama a la función para refrescar la tabla
       onOpenChange(); // Cierra el modal después de enviar la petición
-    } catch (error) {
+    }catch (error) {
       console.error("Error al enviar la petición:", error);
-
+    
       if (error.response) {
-        // El servidor respondió con un estado fuera del rango 2xx
         console.error("Error de respuesta del servidor:", error.response.data);
-        GlobalAlert.error("Hubo un error al registrar el usuario. " + (error.response.data?.message || "Error interno del servidor."));
+    
+        // Si el backend devuelve errores de validación en forma de objeto
+        if (error.response.data) {
+          const serverErrors = error.response.data;
+          
+          // Convertimos el formato de los errores en uno manejable para el formulario
+          let formattedErrors = {};
+          for (const key in serverErrors) {
+            if (serverErrors[key] instanceof Array) {
+              formattedErrors[key] = serverErrors[key][0]; // Tomamos el primer mensaje del array
+            }
+          }
+          setFieldErrors(formattedErrors);
+        } else {
+          GlobalAlert.error("Hubo un error al registrar el usuario.");
+        }
       } else if (error.request) {
-        // La solicitud se realizó pero no se recibió respuesta
         console.error("No se recibió respuesta del servidor:", error.request);
         GlobalAlert.error("No se pudo conectar con el servidor. Intente nuevamente.");
       } else {
-        // Algo sucedió al configurar la solicitud
         console.error("Error al configurar la solicitud:", error.message);
         GlobalAlert.error("Ocurrió un error inesperado. " + error.message);
       }
     }
+    
   };
 
   return (
@@ -122,6 +153,7 @@ const RegisterUser = ({ onRegisterSuccess }) => {
                 onChange={handleInputChange}
                 required
               />
+                {fieldErrors.username && <div className="text-red-500">{fieldErrors.username}</div>}
               <Input
                 id="email"
                 name="email"
@@ -132,6 +164,7 @@ const RegisterUser = ({ onRegisterSuccess }) => {
                 onChange={handleInputChange}
                 required
               />
+               {fieldErrors.email && <div className="text-red-500">{fieldErrors.email}</div>}
               <Input
                 id="Cedula_persona"
                 name="Cedula_persona"
@@ -142,6 +175,7 @@ const RegisterUser = ({ onRegisterSuccess }) => {
                 onChange={handleInputChange}
                 required
               />
+               {fieldErrors.Cedula_persona && <div className="text-red-500">{fieldErrors.Cedula_persona}</div>}
               <Input
                 id="Edad_persona"
                 name="Edad_persona"
@@ -162,6 +196,7 @@ const RegisterUser = ({ onRegisterSuccess }) => {
                 onChange={handleInputChange}
                 required
               />
+                {fieldErrors.Telefono_persona && <div className="text-red-500">{fieldErrors.Telefono_persona}</div>}
               <Select
                 label="Selecciona un rol"
                 placeholder="Seleccione un rol"
